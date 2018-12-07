@@ -1,5 +1,7 @@
 import Tkinter as tk
 import math
+from random import randint
+import time
 
 
 WINDOW_WIDTH = 600
@@ -25,8 +27,13 @@ def setup_board():
     global board, score, current_player
     board = [[STARTING_STONES] * BOARD_LENGTH, [STARTING_STONES] * BOARD_LENGTH]
     score = [0,0]
-    current_player = PLAYER_A
+    current_player = PLAYER_B
     draw_board()
+
+def draw_label(x,y,txt):
+    label = tk.Text(root, height=1,width=1,bg='grey',highlightbackground='grey')
+    label.place(x=x-BLOCK_SIZE/2.7,y=y-BLOCK_SIZE/1.5)
+    label.insert('1.0', txt)
 
 def other_player():
     return (current_player+1)%2
@@ -47,6 +54,9 @@ def draw_board():
         for counter in range(board[PLAYER_B][b]):
             draw_rectangle(b_x,b_y,BLOCK_SIZE*0.8,BLOCK_SIZE*0.8,'white')
             b_y += BLOCK_SIZE
+        t_y = WINDOW_HEIGHT/2 + BLOCK_SIZE
+        draw_label(b_x, t_y, str(b))
+
     for i in range(score[PLAYER_B]):
         i_x = WINDOW_WIDTH/2 + BLOCK_SIZE*(BOARD_LENGTH+1)/2 + math.floor(i/3)*BLOCK_SIZE
         i_y = WINDOW_HEIGHT/2 + BLOCK_SIZE - (i%3)*BLOCK_SIZE
@@ -56,6 +66,8 @@ def draw_board():
         j_y = WINDOW_HEIGHT/2 - BLOCK_SIZE + (j%3)*BLOCK_SIZE
         draw_rectangle(j_x,j_y,BLOCK_SIZE*0.8,BLOCK_SIZE*0.8,'red')
 
+
+def log_board():
     lines=['     Player A']
     line = ' '
     for pot in reversed(board[PLAYER_A]):
@@ -93,13 +105,15 @@ def get_move():
     global move_from_pot, current_player
     print('--------------------')
     if type_of_[current_player] == 'HUMAN':
-        move_from_pot = int(input(names[current_player] + " to move: "))
-        while not valid_move(move_from_pot):
-            move_from_pot = int(input("[Inputs must be as above and non empty] : " +names[current_player] + " to move: "))
+        pass
+        #move_from_pot = int(input(names[current_player] + " to move: "))
+        #while not valid_move(move_from_pot):
+            #move_from_pot = int(input("[Inputs must be as above and non empty] : " +names[current_player] + " to move: "))
     else:
-        move_from_pot = 0
+        move_from_pot = randint(0,BOARD_LENGTH-1)
         while not valid_move(move_from_pot):
-            move_from_pot += 1
+            move_from_pot = randint(0,BOARD_LENGTH-1)
+    print(names[current_player] + ' moves from: ' + str(move_from_pot))
 
 def update_board():
     global into_pot
@@ -129,13 +143,32 @@ def update_current_player():
 def turn_over():
     return not into_pot % LOOP_SIZE == BOARD_LENGTH
 
-def play_game():
-    setup_board()
-    while no_winner():
-        get_move()
-        update_board()
-        update_current_player()
-        draw_board()
+def valid_click(event):
+    global move_from_pot
+    x = event.x
+    y = event.y
+    x_in_bounds = x > WINDOW_WIDTH/2 - BOARD_LENGTH*BLOCK_SIZE/2 or x < WINDOW_WIDTH/2 + BOARD_LENGTH*BLOCK_SIZE/2
+    y_in_bounds = y > WINDOW_HEIGHT/2 + 1.5*BLOCK_SIZE
+    if x_in_bounds and y_in_bounds:
+        move = int(math.floor((x-WINDOW_WIDTH/2)/BLOCK_SIZE) + BOARD_LENGTH/2)
+        if valid_move(move):
+            move_from_pot = move
+            return True
+    return False
+
+def choose_pot(event):
+    if  no_winner() and valid_click(event):
+        game_step()
+        while type_of_[current_player] == 'AI':
+            game_step()
+
+def game_step():
+    get_move()
+    update_board()
+    draw_board()
+    log_board()
+    update_current_player()
+
 
 
 
@@ -143,7 +176,10 @@ root=tk.Tk()
 canvas = tk.Canvas(root, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
 canvas.pack()
 root.title("Mancala")
+setup_board()
+draw_board()
+log_board()
+root.bind("<Button-1>", choose_pot)
 
-play_game()
 
 root.mainloop()
